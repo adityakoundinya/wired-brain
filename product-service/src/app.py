@@ -1,11 +1,11 @@
 from flask import Flask, jsonify, request
 from db import db
 from Product import Product
+import logging.config
+from sqlalchemy import exc
 
-products = [
-  {'id': 1, 'name': 'Product 1'},
-  {'id': 2, 'name': 'Product 2'},
-]
+logging.config.fileConfig("logging.ini", disable_existing_loggers=False)
+log = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:password@db/products'
@@ -14,12 +14,18 @@ db.init_app(app)
 
 @app.route('/products')
 def get_products():
-    products = [product.json for product in Product.find_all()]
-    return jsonify(products)
+    log.debug('Get /products')
+    try:
+        products = [product.json for product in Product.find_all()]
+        return jsonify(products)
+    except exc.SQLAlchemyError:
+        log.exception('An exception occurred while retrieving all products')
+        return 'An exception occurred while retrieving all products', 500
 
 
 @app.route('/product/<int:id>')
 def get_product(id):
+    log.debug(f'GET /product/{id}')
     product = Product.find_by_id(id)
     if product:
         return jsonify(product.json)
@@ -28,6 +34,7 @@ def get_product(id):
 
 @app.route('/product', methods=['POST'])
 def post_product():
+    log.debug('POST /product:' + str(request.json))
     request_product = request.json
     new_product = Product(None, request_product['name'])
     new_product.save_to_db()
@@ -36,6 +43,7 @@ def post_product():
 
 @app.route('/product/<int:id>', methods=['PUT'])
 def put_product(id):
+    log.debug(f'Editing Product with id {id}')
     existing_product = Product.find_by_id(id)
     if(existing_product):
         updated_product = request.json
@@ -48,6 +56,7 @@ def put_product(id):
 
 @app.route('/product/<int:id>', methods=['DELETE'])
 def delete_product(id):
+    log.debug('Deleting product with id {id}')
     existing_product = Product.find_by_id(id)
     if(existing_product):
         existing_product.delete_from_db()
