@@ -5,13 +5,14 @@ import logging.config
 from sqlalchemy import exc
 import configparser
 
-logging.config.fileConfig("logging.ini", disable_existing_loggers=False)
+logging.config.fileConfig("/config/logging.ini",
+                          disable_existing_loggers=False)
 log = logging.getLogger(__name__)
 
 
 def get_database_url():
     config = configparser.ConfigParser()
-    config.read('db.ini')
+    config.read('/config/db.ini')
     database_configuration = config['mysql']
     host = database_configuration['host']
     username = database_configuration['username']
