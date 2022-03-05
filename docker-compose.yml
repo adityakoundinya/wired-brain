@@ -1,8 +1,14 @@
+secrets:
+  db_password:
+    file: db_password.txt
+    
 services:
   productservice:
     build: product-service
     volumes:
       - "./config:/config"
+    secrets:
+      - db_password
 
   web:
     build: nginx
@@ -16,6 +22,5 @@ services:
       - "db-volume:/var/lib/mysql"
     environment:
       - MYSQL_ROOT_PASSWORD=password
-
 volumes:
   db-volume:
