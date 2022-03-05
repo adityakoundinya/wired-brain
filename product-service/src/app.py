@@ -3,12 +3,27 @@ from db import db
 from Product import Product
 import logging.config
 from sqlalchemy import exc
+import configparser
 
 logging.config.fileConfig("logging.ini", disable_existing_loggers=False)
 log = logging.getLogger(__name__)
 
+
+def get_database_url():
+    config = configparser.ConfigParser()
+    config.read('db.ini')
+    database_configuration = config['mysql']
+    host = database_configuration['host']
+    username = database_configuration['username']
+    password = database_configuration['password']
+    database = database_configuration['database']
+    database_url = f'mysql://{username}:{password}@{host}/{database}'
+    log.info(f'Connecting to db: {database_url}')
+    return database_url
+
+
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:password@db/products'
+app.config['SQLALCHEMY_DATABASE_URI'] = get_database_url()
 db.init_app(app)
 
 
