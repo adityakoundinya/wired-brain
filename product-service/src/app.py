@@ -1,4 +1,6 @@
 from flask import Flask, jsonify, request
+from db import db
+from Product import Product
 
 products = [
   {'id': 1, 'name': 'Product 1'},
@@ -6,54 +8,52 @@ products = [
 ]
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:password@db/products'
+db.init_app(app)
 
 
 @app.route('/products')
 def get_products():
+    products = [product.json for product in Product.find_all()]
     return jsonify(products)
 
 
 @app.route('/product/<int:id>')
 def get_product(id):
-    product_list = [product for product in products if product['id'] == id]
-    if len(product_list) == 0:
-        return f'Product with id {id} not found', 404
-    return jsonify(product_list[0])
+    product = Product.find_by_id(id)
+    if product:
+        return jsonify(product.json)
+    return f'Product with id {id} not found', 404
 
 
 @app.route('/product', methods=['POST'])
 def post_product():
     request_product = request.json
-
-    new_id = max([product['id'] for product in products]) + 1
-
-    new_product = {
-        'id': new_id,
-        'name': request_product['name']
-    }
-
-    products.append(new_product)
-
-    return jsonify(new_product), 201
+    new_product = Product(None, request_product['name'])
+    new_product.save_to_db()
+    return jsonify(new_product.json), 201
 
 
 @app.route('/product/<int:id>', methods=['PUT'])
 def put_product(id):
-    updated_product = request.json
-    for product in products:
-        if(product['id'] == id):
-            product['name'] = updated_product['name']
-            return jsonify(product), 200
+    existing_product = Product.find_by_id(id)
+    if(existing_product):
+        updated_product = request.json
+        existing_product.name = updated_product['name']
+        existing_product.save_to_db()
+        return jsonify(existing_product.json), 200
 
     return f'Product with id {id} not found', 404
 
 
 @app.route('/product/<int:id>', methods=['DELETE'])
 def delete_product(id):
-    product_list = [product for product in products if product['id'] == id]
-    if len(product_list) == 1:
-        products.remove(product_list[0])
-        return f'Product with id {id} deleted, 200'
+    existing_product = Product.find_by_id(id)
+    if(existing_product):
+        existing_product.delete_from_db()
+        return jsonify({
+            'message': f'Deleted Product with id {id}'
+        }), 200
 
     return f'Product with id {id} not found', 404
 
